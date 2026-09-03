@@ -30,14 +30,14 @@
 
     local themes = {
         preset = {
-            accent = rgb(255, 0, 242),
-            window_outline = rgb(0, 0, 0),
-            inline = rgb(0, 0, 0),
-            background = rgb(0, 0, 0),
-            visible_backgrounds = rgb(0, 0, 0),
-            text_color = rgb(221, 223, 222),
-            glow = rgb(0, 0, 0),  -- Pure red
-            deselected = rgb(0, 0, 0),
+accent = Color3.fromRGB(255, 0, 242),
+window_outline = Color3.fromRGB(0, 0, 0),
+inline = Color3.fromRGB(0, 0, 0),
+background = Color3.fromRGB(0, 0, 0),
+visible_backgrounds = Color3.fromRGB(0, 0, 0),
+text_color = Color3.fromRGB(221, 223, 222),
+        glow = Color3.fromRGB(255, 0, 242),
+         deselected = Color3.fromRGB(0, 0, 0),
         },
         utility = {},
         gradients = {
