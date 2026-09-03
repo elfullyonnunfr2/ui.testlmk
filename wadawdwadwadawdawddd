@@ -32,12 +32,12 @@
         preset = {
             accent = rgb(255, 0, 242),
             window_outline = rgb(0, 0, 0),
-            inline = rgb(25, 27, 27),
-            background = rgb(17, 19, 19),
-            visible_backgrounds = rgb(20, 23, 22),
+            inline = rgb(0, 0, 0),
+            background = rgb(0, 0, 0),
+            visible_backgrounds = rgb(0, 0, 0),
             text_color = rgb(221, 223, 222),
-            glow = rgb(255, 0, 234),  -- Pure red
-            deselected = rgb(89, 91, 91),
+            glow = rgb(0, 0, 0),  -- Pure red
+            deselected = rgb(0, 0, 0),
         },
         utility = {},
         gradients = {
@@ -2949,8 +2949,99 @@ Items.Input = Library:Create("TextBox", {
                 icon = "http://www.roblox.com/asset/?id=6031280882"
             })
 
-            local ServerSection = Tab:Section({Name = "Server", Side = "Left"})
+local Section = Tab:Section({Name = "Main", Side = "Left"})
 
+ConfigHolder = Section:Dropdown({
+    Name = "Configs",
+    Options = {"Report", "This", "Error", "To", "Finobe"},
+    Callback = function(option)
+        if Text then Text.Set(option) end
+    end,
+    Flag = "config_Name_list"
+})
+
+Library:UpdateConfigList()
+
+Section:Textbox({
+    Name = "Config Name:",
+    Flag = "config_Name_text",
+    default = ""
+})
+
+Section:Button({
+    Name = "Save",
+    Callback = function()
+        if Flags["config_Name_text"] == "" then return end
+
+        writefile(
+            Library.Directory .. "/configs/" .. Flags["config_Name_text"] .. ".cfg",
+            Library:GetConfig()
+        )
+
+        Library:UpdateConfigList()
+
+        Notifications:Create({
+            Name = "Saved Config (" ..
+                Library.Directory ..
+                "/configs/" ..
+                Flags["config_Name_text"] ..
+                ".cfg)"
+        })
+    end
+})
+
+Section:Button({
+    Name = "Load",
+    Callback = function()
+        if Flags["config_Name_text"] == "" then return end
+
+        Library:LoadConfig(
+            readfile(
+                Library.Directory ..
+                "/configs/" ..
+                Flags["config_Name_text"] ..
+                ".cfg"
+            )
+        )
+
+        Library:UpdateConfigList()
+
+        Notifications:Create({
+            Name = "Loaded Config (" ..
+                Library.Directory ..
+                "/configs/" ..
+                Flags["config_Name_text"] ..
+                ".cfg)"
+        })
+    end
+})
+
+Section:Button({
+    Name = "Delete",
+    Callback = function()
+        if Flags["config_Name_text"] == "" then return end
+
+        delfile(
+            Library.Directory ..
+            "/configs/" ..
+            Flags["config_Name_text"] ..
+            ".cfg"
+        )
+
+        Library:UpdateConfigList()
+
+        Notifications:Create({
+            Name = "Deleted Config (" ..
+                Library.Directory ..
+                "/configs/" ..
+                Flags["config_Name_text"] ..
+                ".cfg)"
+        })
+    end
+})
+
+
+--// SERVER FUNCTIONS
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
 local HttpService = game:GetService("HttpService")
@@ -2958,198 +3049,137 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local PlaceId = game.PlaceId
 
-local function RejoinServer()
-    TeleportService:TeleportToPlaceInstance(
-        PlaceId,
-        game.JobId,
-        LocalPlayer
-    )
-end
-
 local function GetServers()
-    local url = "https://games.roblox.com/v1/games/" .. PlaceId ..
-        "/servers/Public?sortOrder=Asc&limit=100"
-
     local success, result = pcall(function()
-        return game:HttpGet(url)
+        return game:HttpGet(
+            "https://games.roblox.com/v1/games/" ..
+            PlaceId ..
+            "/servers/Public?sortOrder=Asc&limit=100"
+        )
     end)
 
     if not success then
         return nil
     end
 
-    local decoded = pcall(function()
+    local success2, data = pcall(function()
         return HttpService:JSONDecode(result)
     end)
 
-    if not decoded then
+    if not success2 then
         return nil
     end
 
-    return HttpService:JSONDecode(result)
+    return data
 end
 
-local function ServerHop()
-    local data = GetServers()
-    if not data or not data.data then
-        return
-    end
 
-    local servers = {}
-
-    for _, server in ipairs(data.data) do
-        if server.id ~= game.JobId
-            and server.playing < server.maxPlayers then
-
-            table.insert(servers, server)
-        end
-    end
-
-    if #servers > 0 then
-        local server = servers[math.random(1, #servers)]
-
-        TeleportService:TeleportToPlaceInstance(
-            PlaceId,
-            server.id,
-            LocalPlayer
-        )
-    end
-end
-
-local function JoinLowServer()
-    local data = GetServers()
-    if not data or not data.data then
-        return
-    end
-
-    local lowestServer = nil
-
-    for _, server in ipairs(data.data) do
-        if server.id ~= game.JobId
-            and server.playing < server.maxPlayers then
-
-            if not lowestServer
-                or server.playing < lowestServer.playing then
-
-                lowestServer = server
-            end
-        end
-    end
-
-    if lowestServer then
-        TeleportService:TeleportToPlaceInstance(
-            PlaceId,
-            lowestServer.id,
-            LocalPlayer
-        )
-    end
-end
-
-local function JoinFriend(username)
-    if not username or username == "" then
-        return
-    end
-
-    local success, userId = pcall(function()
-        return Players:GetUserIdFromNameAsync(username)
-    end)
-
-    if not success or not userId then
-        return
-    end
-
-    local success2, presence = pcall(function()
-        return HttpService:JSONDecode(
-            game:HttpGet(
-                "https://presence.roblox.com/v1/presence/users",
-                false,
-                {
-                    ["Content-Type"] = "application/json"
-                }
-            )
-        )
-    end)
-end
-
-local function JoinLiveServer()
-    local data = GetServers()
-    if not data or not data.data then
-        return
-    end
-
-    local liveServers = {}
-
-    for _, server in ipairs(data.data) do
-        if server.id ~= game.JobId
-            and server.playing > 0
-            and server.playing < server.maxPlayers then
-
-            table.insert(liveServers, server)
-        end
-    end
-
-    if #liveServers > 0 then
-        local server = liveServers[
-            math.random(1, #liveServers)
-        ]
-
-        TeleportService:TeleportToPlaceInstance(
-            PlaceId,
-            server.id,
-            LocalPlayer
-        )
-    end
-end
-
-local ServerSection = Section
-
-ServerSection:Button({
+--// REJOIN
+Section:Button({
     Name = "Rejoin Server",
     Callback = function()
-        RejoinServer()
+        TeleportService:TeleportToPlaceInstance(
+            PlaceId,
+            game.JobId,
+            LocalPlayer
+        )
     end
 })
 
-ServerSection:Button({
+
+--// SERVER HOP
+Section:Button({
     Name = "Server Hop",
     Callback = function()
-        ServerHop()
+        local data = GetServers()
+        if not data or not data.data then return end
+
+        local servers = {}
+
+        for _, server in ipairs(data.data) do
+            if server.id ~= game.JobId
+                and server.playing < server.maxPlayers then
+
+                table.insert(servers, server)
+            end
+        end
+
+        if #servers > 0 then
+            local server = servers[
+                math.random(1, #servers)
+            ]
+
+            TeleportService:TeleportToPlaceInstance(
+                PlaceId,
+                server.id,
+                LocalPlayer
+            )
+        end
     end
 })
 
-ServerSection:Button({
+
+--// LOW SERVER
+Section:Button({
     Name = "Join Low Server",
     Callback = function()
-        JoinLowServer()
+        local data = GetServers()
+        if not data or not data.data then return end
+
+        local lowestServer = nil
+
+        for _, server in ipairs(data.data) do
+            if server.id ~= game.JobId
+                and server.playing < server.maxPlayers then
+
+                if not lowestServer
+                    or server.playing < lowestServer.playing then
+
+                    lowestServer = server
+                end
+            end
+        end
+
+        if lowestServer then
+            TeleportService:TeleportToPlaceInstance(
+                PlaceId,
+                lowestServer.id,
+                LocalPlayer
+            )
+        end
     end
 })
 
-ServerSection:Button({
+Section:Button({
     Name = "Join Live Server",
     Callback = function()
-        JoinLiveServer()
+        local data = GetServers()
+        if not data or not data.data then return end
+
+        local servers = {}
+
+        for _, server in ipairs(data.data) do
+            if server.id ~= game.JobId
+                and server.playing > 0
+                and server.playing < server.maxPlayers then
+
+                table.insert(servers, server)
+            end
+        end
+
+        if #servers > 0 then
+            local server = servers[
+                math.random(1, #servers)
+            ]
+
+            TeleportService:TeleportToPlaceInstance(
+                PlaceId,
+                server.id,
+                LocalPlayer
+            )
+        end
     end
 })
-
-local FriendBox = ServerSection:Textbox({
-    Name = "Friend Username:",
-    Flag = "server_friend_username",
-    Default = ""
-})
-
-ServerSection:Button({
-    Name = "Join Friend Server",
-    Callback = function()
-        JoinFriend(FriendBox.Value)
-    end
-})
-
-            local Section = Tab:Section({Name = "Main", Side = "Left"})
-            ConfigHolder = Section:Dropdown({Name = "Configs", Options = {"Report", "This", "Error", "To", "Finobe"}, Callback = function(option) if Text then Text.Set(option) end end, Flag = "config_Name_list"}); Library:UpdateConfigList()
-            Section:Textbox({Name = "Config Name:", Flag = "config_Name_text", default = ""})
-            Section:Button({Name = "Save", Callback = function() if Flags["config_Name_text"] == "" then return end writefile(Library.Directory .. "/configs/" .. Flags["config_Name_text"] .. ".cfg", Library:GetConfig()) Library:UpdateConfigList() Notifications:Create({Name = "Saved Config (" ..  Library.Directory .. "/configs/" .. Flags["config_Name_text"] .. ".cfg" .. ")"}) end})
-            Section:Button({Name = "Load", Callback = function() if Flags["config_Name_text"] == "" then return end Library:LoadConfig(readfile(Library.Directory .. "/configs/" .. Flags["config_Name_text"] .. ".cfg")) Library:UpdateConfigList() Notifications:Create({Name = "Loaded Config (" ..  Library.Directory .. "/configs/" .. Flags["config_Name_text"] .. ".cfg" .. ")"}) end})
-            Section:Button({Name = "Delete", Callback = function() if Flags["config_Name_text"] == "" then return end delfile(Library.Directory .. "/configs/" .. Flags["config_Name_text"] .. ".cfg") Library:UpdateConfigList() Notifications:Create({Name = "Deleted Config (" ..  Library.Directory .. "/configs/" .. Flags["config_Name_text"] .. ".cfg" .. ")"}) end})
 
             local Section = Tab:Section({Name = "Other", Side = "Right"})
             Section:Label({Name = "Accent Color"}):Colorpicker({Callback = function(color, alpha) Library:RefreshTheme("accent", color) end, Color = themes.preset.accent})
