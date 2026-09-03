@@ -34,7 +34,7 @@
             window_outline = rgb(0, 0, 0),
             inline = rgb(25, 27, 27),
             background = rgb(3, 3, 3),
-            visible_backgrounds = rgb(20, 23, 22),
+            visible_backgrounds = rgb(3, 3, 3),
             text_color = rgb(221, 223, 222),
             glow = rgb(255, 0, 242),  -- Pure red
             deselected = rgb(89, 91, 91),
